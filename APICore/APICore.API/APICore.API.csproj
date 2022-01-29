@@ -39,6 +39,7 @@
   </ItemGroup>
 
   <ItemGroup>
+    <ProjectReference Include="..\APICore.Common\APICore.Common.csproj" />
     <ProjectReference Include="..\APICore.Data\APICore.Data.csproj" />
     <ProjectReference Include="..\APICore.Services\APICore.Services.csproj" />
   </ItemGroup>
