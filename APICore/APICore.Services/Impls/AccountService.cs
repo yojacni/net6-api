@@ -11,7 +11,6 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Localization;
 using Microsoft.IdentityModel.Tokens;
-using Microsoft.WindowsAzure.Storage.Blob;
 using rlcx.suid;
 using System;
 using System.Collections.Generic;
@@ -35,15 +34,17 @@ namespace APICore.Services.Impls
 
         private readonly IStringLocalizer<IAccountService> _localizer;
         private readonly IDetectionService _detectionService;
-        private readonly CloudBlobClient _blobClient;
+        private readonly IStorageService _storageService;
 
-        public AccountService(IConfiguration configuration, IUnitOfWork uow, IStringLocalizer<IAccountService> localizer, IDetectionService detectionService, CloudBlobClient blobClient)
+        public AccountService(IConfiguration configuration, IUnitOfWork uow,
+            IStringLocalizer<IAccountService> localizer,
+            IDetectionService detectionService, IStorageService storageService)
         {
             _configuration = configuration ?? throw new ArgumentNullException(nameof(configuration));
             _uow = uow ?? throw new ArgumentNullException(nameof(uow));
             _localizer = localizer ?? throw new ArgumentNullException(nameof(localizer));
             _detectionService = detectionService ?? throw new ArgumentNullException(nameof(detectionService));
-            _blobClient = blobClient ?? throw new ArgumentNullException(nameof(blobClient));
+            _storageService = storageService ?? throw new ArgumentNullException(nameof(storageService));
         }
 
         public async Task<(User user, string accessToken, string refreshToken)> LoginAsync(LoginRequest loginRequest)
@@ -125,15 +126,8 @@ namespace APICore.Services.Impls
             return new JwtSecurityTokenHandler().WriteToken(jwt); //the method is called WriteToken but returns a string
         }
 
-        public async Task GlobalLogoutAsync(ClaimsIdentity claimsIdentity)
+        public async Task GlobalLogoutAsync(int userId)
         {
-            if (claimsIdentity == null)
-            {
-                throw new ArgumentNullException(nameof(claimsIdentity));
-            }
-
-            var userId = Convert.ToInt32(claimsIdentity.FindFirst(ClaimTypes.UserData)?.Value);
-
             if (userId > 0)
             {
                 var user = await _uow.UserRepository.FirstOrDefaultAsync(u => u.Id == userId);
@@ -169,22 +163,15 @@ namespace APICore.Services.Impls
             {
                 throw new UserNotFoundException(_localizer);
             }
-
         }
 
-        public async Task LogoutAsync(string accessToken, ClaimsIdentity claimsIdentity)
+        public async Task LogoutAsync(string accessToken, int userId)
         {
             // Null or empty parameters check
             if (string.IsNullOrEmpty(accessToken))
             {
                 throw new ArgumentNullException(nameof(accessToken));
             }
-            if (claimsIdentity == null)
-            {
-                throw new ArgumentNullException(nameof(claimsIdentity));
-            }
-
-            var userId = Convert.ToInt32(claimsIdentity.FindFirst(ClaimTypes.UserData)?.Value);
 
             var token = accessToken.Split("Bearer")[1].Trim();
 
@@ -227,12 +214,12 @@ namespace APICore.Services.Impls
 
         public async Task SignUpAsync(SignUpRequest suRequest)
         {
-            if(suRequest.Email == "")
+            if (suRequest.Email == "")
             {
                 throw new EmptyEmailBadRequestException(_localizer);
             }
             var emailExists = await _uow.UserRepository.FindAllAsync(u => u.Email == suRequest.Email);
-            if(emailExists != null)
+            if (emailExists != null)
             {
                 if (emailExists.Count > 0)
                 {
@@ -316,12 +303,10 @@ namespace APICore.Services.Impls
             return Task.FromResult(principal);
         }
 
-        public async Task GetRefreshTokenAsync(RefreshTokenRequest refreshToken, ClaimsPrincipal principal)
+        public async Task GetRefreshTokenAsync(RefreshTokenRequest refreshToken, int userId)
         {
-            var userId = principal.Claims.FirstOrDefault(c => c.Type == ClaimTypes.UserData).Value;
-
             var refToken = await _uow.UserTokenRepository
-                .FirstOrDefaultAsync(u => u.UserId == int.Parse(userId) && u.AccessToken == refreshToken.Token);
+                .FirstOrDefaultAsync(u => u.UserId == userId && u.AccessToken == refreshToken.Token);
             if (refToken == null)
             {
                 throw new RefreshTokenNotFoundException(_localizer);
@@ -373,13 +358,8 @@ namespace APICore.Services.Impls
             return claims;
         }
 
-        public async Task ChangePasswordAsync(ChangePasswordRequest changePassword, ClaimsIdentity claimsIdentity)
+        public async Task ChangePasswordAsync(ChangePasswordRequest changePassword, int userId)
         {
-            if (claimsIdentity == null)
-            {
-                throw new ArgumentNullException(nameof(claimsIdentity));
-            }
-            var userId = Convert.ToInt32(claimsIdentity.FindFirst(ClaimTypes.UserData)?.Value);
             var user = await _uow.UserRepository.FirstOrDefaultAsync(u => u.Id == userId);
             var passwordHash = GetSha256Hash(changePassword.OldPassword);
 
@@ -435,15 +415,8 @@ namespace APICore.Services.Impls
             return dd;
         }
 
-        public async Task<User> UpdateProfileAsync(UpdateProfileRequest updateProfile, ClaimsIdentity claimsIdentity)
+        public async Task<User> UpdateProfileAsync(UpdateProfileRequest updateProfile, int userId)
         {
-            if (claimsIdentity == null)
-            {
-                throw new ArgumentNullException(nameof(claimsIdentity));
-            }
-
-            var userId = Convert.ToInt32(claimsIdentity.FindFirst(ClaimTypes.UserData)?.Value);
-
             var user = await _uow.UserRepository.FirstOrDefaultAsync(u => u.Id == userId);
 
             if (user == null)
@@ -512,15 +485,8 @@ namespace APICore.Services.Impls
             return user;
         }
 
-        public async Task ChangeAccountStatusAsync(ChangeAccountStatusRequest changeAccountStatus, ClaimsIdentity claimsIdentity)
+        public async Task ChangeAccountStatusAsync(ChangeAccountStatusRequest changeAccountStatus, int userId)
         {
-            if (claimsIdentity == null)
-            {
-                throw new ArgumentNullException(nameof(claimsIdentity));
-            }
-
-            var userId = Convert.ToInt32(claimsIdentity.FindFirst(ClaimTypes.UserData)?.Value);
-
             // Check if the Master exist
             var master = await _uow.UserRepository.FirstOrDefaultAsync(u => u.Id == userId);
 
@@ -559,15 +525,8 @@ namespace APICore.Services.Impls
             await _uow.CommitAsync();
         }
 
-        public async Task<User> UploadAvatar(IFormFile file, ClaimsIdentity claimsIdentity)
+        public async Task<User> UploadAvatar(IFormFile file, int userId)
         {
-            if (claimsIdentity == null)
-            {
-                throw new ArgumentNullException(nameof(claimsIdentity));
-            }
-
-            var userId = Convert.ToInt32(claimsIdentity.FindFirst(ClaimTypes.UserData)?.Value);
-
             var user = await _uow.UserRepository.FirstOrDefaultAsync(u => u.Id == userId);
 
             if (user == null)
@@ -588,62 +547,34 @@ namespace APICore.Services.Impls
             {
                 throw new FileInvalidSizeBadRequestException(_localizer);
             }
-            var imagesRootPath = _configuration.GetSection("Blobs")["ImagesRootPath"];
+            //var imagesRootPath = _configuration.GetSection("Blobs")["ImagesRootPath"];
             var imagesContainer = _configuration.GetSection("Blobs")["ImagesContainer"];
 
-            using (Stream stream = file.OpenReadStream())
+            var mime = file.ContentType;
+            if (!mime.Equals("image/png") && !mime.Equals("image/jpg") && !mime.Equals("image/jpeg"))
             {
-                using var binaryReader = new BinaryReader(stream);
-                var fileContent = binaryReader.ReadBytes((int)file.Length);
-                var mime = file.ContentType;
-                if (!mime.Equals("image/png") && !mime.Equals("image/jpg") && !mime.Equals("image/jpeg"))
-                {
-                    throw new FileInvalidTypeBadRequestException(_localizer);
-                }
-
-                string guid = Guid.NewGuid().ToString();
-
-                if (!string.IsNullOrWhiteSpace(user.Avatar))
-                {
-                    //delete the old one in order to avoid client cache problems
-                    var segments = new Uri(user.Avatar).Segments;
-                    var oldGuid = segments[segments.Length - 1];
-                    await RemoveOldImageFromBlobStorage(imagesContainer, oldGuid);
-                }
-
-                //upload the new one and update user avatar's properties
-                await UploadImageToBlobStorage(fileContent, imagesContainer, guid, mime);
-                user.Avatar = string.Format("{0}/{1}", imagesRootPath, guid);
-                user.AvatarMimeType = mime;
-
-                await _uow.UserRepository.UpdateAsync(user, userId);
-                await _uow.CommitAsync();
+                throw new FileInvalidTypeBadRequestException(_localizer);
             }
 
+            string guid = Guid.NewGuid().ToString();
+
+            if (!string.IsNullOrWhiteSpace(user.Avatar))
+            {
+                //delete the old one in order to avoid client cache problems
+                var oldGuid = user.Avatar;
+                await _storageService.DeleteFileBlobAsync(imagesContainer, oldGuid);
+            }
+
+            var result = await _storageService.UploadFileBlobAsync(imagesContainer, file.OpenReadStream(),
+                    mime, guid);
+
+            user.Avatar = guid;
+            user.AvatarMimeType = mime;
+
+            await _uow.UserRepository.UpdateAsync(user, userId);
+            await _uow.CommitAsync();
+
             return user;
-        }
-
-        private async Task<string> UploadImageToBlobStorage(byte[] content, string imagesContainer, string fileId, string contentType)
-        {
-            // get a reference to our container
-            var container = _blobClient.GetContainerReference(imagesContainer);
-
-            // using the container reference, get a block blob reference and set its type
-            CloudBlockBlob blockBlob = container.GetBlockBlobReference(fileId);
-            blockBlob.Properties.ContentType = contentType;
-
-            await blockBlob.UploadFromByteArrayAsync(content, 0, content.Length);
-
-            return "";
-        }
-
-        private async Task RemoveOldImageFromBlobStorage(string imagesContainer, string fileId)
-        {
-            var container = _blobClient.GetContainerReference(imagesContainer);
-
-            CloudBlockBlob blockBlob = container.GetBlockBlobReference(fileId);
-
-            await blockBlob.DeleteIfExistsAsync();
         }
 
         public async Task<string> ForgotPasswordAsync(string email)

@@ -12,7 +12,6 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Localization;
-using Microsoft.WindowsAzure.Storage;
 using Moq;
 using System;
 using System.Threading.Tasks;
@@ -24,35 +23,37 @@ namespace APICore.Tests.Integration.Account
     public class RegisterAction
     {
         private DbContextOptions<CoreDbContext> ContextOptions { get; }
-        private readonly CloudStorageAccount StorageAccount;
+        private readonly IStorageService storageService;
+
         public RegisterAction()
         {
             ContextOptions = new DbContextOptionsBuilder<CoreDbContext>()
                                        .UseInMemoryDatabase("TestRegisterDatabase")
                                        .Options;
+            storageService = new Mock<IStorageService>().Object;
 
-            StorageAccount = CloudStorageAccount.Parse(@"DefaultEndpointsProtocol=https;AccountName=devstoreaccount1;AccountKey=Eby8vdM02xNOcqFlqUwJPLlmEtlCDXJ1OUzFT50uSRZ6IFsuFq2UVErCz4I6tq/K1SZFPTOtr/KBHBeksoGMGw==;BlobEndpoint=http://127.0.0.1:10000/devstoreaccount1/apicore;");
             SeedAsync().Wait();
         }
+
         private async Task SeedAsync()
         {
             await using var context = new CoreDbContext(ContextOptions);
 
-            await context.Database.EnsureDeletedAsync();
-            await context.Database.EnsureCreatedAsync();
-
-            await context.Users.AddAsync(new User
+            if (await context.Users.AnyAsync() == false)
             {
-                Id = 3,
-                Email = "pepe@itguy.com",
-                FullName = "Pepe Delgado",
-                Gender = 0,
-                Phone = "+53 12345678",
-                Password = @"gM3vIavHvte3fimrk2uVIIoAB//f2TmRuTy4IWwNWp0=",
-                Status = StatusEnum.ACTIVE
-            });
+                await context.Users.AddAsync(new User
+                {
+                    Id = 3,
+                    Email = "pepe@itguy.com",
+                    FullName = "Pepe Delgado",
+                    Gender = 0,
+                    Phone = "+53 12345678",
+                    Password = @"gM3vIavHvte3fimrk2uVIIoAB//f2TmRuTy4IWwNWp0=",
+                    Status = StatusEnum.ACTIVE
+                });
 
-            await context.SaveChangesAsync();
+                await context.SaveChangesAsync();
+            }
         }
 
         [Fact(DisplayName = "Successfully Register Should Return Created Status Code (201)")]
@@ -71,7 +72,7 @@ namespace APICore.Tests.Integration.Account
             };
 
             using var context = new CoreDbContext(ContextOptions);
-            var accountService = new AccountService(new Mock<IConfiguration>().Object, new UnitOfWork(context), new Mock<IStringLocalizer<IAccountService>>().Object, new Mock<IDetectionService>().Object, StorageAccount.CreateCloudBlobClient());
+            var accountService = new AccountService(new Mock<IConfiguration>().Object, new UnitOfWork(context), new Mock<IStringLocalizer<IAccountService>>().Object, new Mock<IDetectionService>().Object, storageService);
             var accountController = new AccountController(accountService, new Mock<AutoMapper.IMapper>().Object, new Mock<IEmailService>().Object, new Mock<IWebHostEnvironment>().Object);
 
             // ACT
@@ -97,7 +98,7 @@ namespace APICore.Tests.Integration.Account
             };
 
             using var context = new CoreDbContext(ContextOptions);
-            var accountService = new AccountService(new Mock<IConfiguration>().Object, new UnitOfWork(context), new Mock<IStringLocalizer<IAccountService>>().Object, new Mock<IDetectionService>().Object, StorageAccount.CreateCloudBlobClient());
+            var accountService = new AccountService(new Mock<IConfiguration>().Object, new UnitOfWork(context), new Mock<IStringLocalizer<IAccountService>>().Object, new Mock<IDetectionService>().Object, storageService);
             var accountController = new AccountController(accountService, new Mock<AutoMapper.IMapper>().Object, new Mock<IEmailService>().Object, new Mock<IWebHostEnvironment>().Object);
 
             // ACT
@@ -118,7 +119,7 @@ namespace APICore.Tests.Integration.Account
             };
 
             using var context = new CoreDbContext(ContextOptions);
-            var accountService = new AccountService(new Mock<IConfiguration>().Object, new UnitOfWork(context), new Mock<IStringLocalizer<IAccountService>>().Object, new Mock<IDetectionService>().Object, StorageAccount.CreateCloudBlobClient());
+            var accountService = new AccountService(new Mock<IConfiguration>().Object, new UnitOfWork(context), new Mock<IStringLocalizer<IAccountService>>().Object, new Mock<IDetectionService>().Object, storageService);
             var accountController = new AccountController(accountService, new Mock<AutoMapper.IMapper>().Object, new Mock<IEmailService>().Object, new Mock<IWebHostEnvironment>().Object);
 
             // ACT
@@ -132,20 +133,20 @@ namespace APICore.Tests.Integration.Account
         [Fact(DisplayName = "Empty Password Should Return Bad Request Exception")]
         public void EmptyPasswordShouldReturnBadRequestException()
         {
-           // ARRANGE
-           var fakeUserRequest = new SignUpRequest
-           {
-               Email = @"pepe2@itguy.com",
-               FullName = "Pepe Perez",
-               Gender = 0,
-               Phone = "+53 12345678",
-               Birthday = DateTime.Now,
-               Password = "",
-               ConfirmationPassword = @"S3cretP@$$"
-           };
+            // ARRANGE
+            var fakeUserRequest = new SignUpRequest
+            {
+                Email = @"pepe2@itguy.com",
+                FullName = "Pepe Perez",
+                Gender = 0,
+                Phone = "+53 12345678",
+                Birthday = DateTime.Now,
+                Password = "",
+                ConfirmationPassword = @"S3cretP@$$"
+            };
 
             using var context = new CoreDbContext(ContextOptions);
-            var accountService = new AccountService(new Mock<IConfiguration>().Object, new UnitOfWork(context), new Mock<IStringLocalizer<IAccountService>>().Object, new Mock<IDetectionService>().Object, StorageAccount.CreateCloudBlobClient());
+            var accountService = new AccountService(new Mock<IConfiguration>().Object, new UnitOfWork(context), new Mock<IStringLocalizer<IAccountService>>().Object, new Mock<IDetectionService>().Object, storageService);
             var accountController = new AccountController(accountService, new Mock<AutoMapper.IMapper>().Object, new Mock<IEmailService>().Object, new Mock<IWebHostEnvironment>().Object);
 
             // ACT
@@ -172,7 +173,7 @@ namespace APICore.Tests.Integration.Account
             };
 
             using var context = new CoreDbContext(ContextOptions);
-            var accountService = new AccountService(new Mock<IConfiguration>().Object, new UnitOfWork(context), new Mock<IStringLocalizer<IAccountService>>().Object, new Mock<IDetectionService>().Object, StorageAccount.CreateCloudBlobClient());
+            var accountService = new AccountService(new Mock<IConfiguration>().Object, new UnitOfWork(context), new Mock<IStringLocalizer<IAccountService>>().Object, new Mock<IDetectionService>().Object, storageService);
             var accountController = new AccountController(accountService, new Mock<AutoMapper.IMapper>().Object, new Mock<IEmailService>().Object, new Mock<IWebHostEnvironment>().Object);
 
             // ACT
@@ -199,7 +200,7 @@ namespace APICore.Tests.Integration.Account
             };
 
             using var context = new CoreDbContext(ContextOptions);
-            var accountService = new AccountService(new Mock<IConfiguration>().Object, new UnitOfWork(context), new Mock<IStringLocalizer<IAccountService>>().Object, new Mock<IDetectionService>().Object, StorageAccount.CreateCloudBlobClient());
+            var accountService = new AccountService(new Mock<IConfiguration>().Object, new UnitOfWork(context), new Mock<IStringLocalizer<IAccountService>>().Object, new Mock<IDetectionService>().Object, storageService);
             var accountController = new AccountController(accountService, new Mock<AutoMapper.IMapper>().Object, new Mock<IEmailService>().Object, new Mock<IWebHostEnvironment>().Object);
 
             // ACT
