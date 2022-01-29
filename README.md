@@ -1,4 +1,4 @@
-# NET Core 5 API
+# NET Core 6 API
 
 [![Continuous Integration](https://github.com/techsavyntsprint/netcore-api/workflows/CI/badge.svg)](https://github.com/techsavyntsprint/netcore-api/actions)
 
