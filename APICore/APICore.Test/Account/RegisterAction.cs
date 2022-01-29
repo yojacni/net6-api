@@ -18,7 +18,7 @@ using System.Threading.Tasks;
 using Wangkanai.Detection.Services;
 using Xunit;
 
-namespace APICore.Tests.Integration.Account
+namespace APICore.Tests.Account
 {
     public class RegisterAction
     {

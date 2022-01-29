@@ -21,7 +21,7 @@ using System.Threading.Tasks;
 using APICore.Data.UoW;
 using Wangkanai.Detection.Models;
 
-namespace APICore.Tests.Integration.Account
+namespace APICore.Tests.Account
 {
     public class UserStatusAction
     {

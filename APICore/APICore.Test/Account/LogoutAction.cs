@@ -20,7 +20,7 @@ using Wangkanai.Detection.Models;
 using Wangkanai.Detection.Services;
 using Xunit;
 
-namespace APICore.Tests.Integration.Account
+namespace APICore.Tests.Account
 {
     public class LogoutAction
     {
