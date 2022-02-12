@@ -15,6 +15,7 @@ using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Reflection;
 using System.Text;
 
 namespace APICore.API
@@ -66,10 +67,9 @@ namespace APICore.API
                     }
                 );
                 var basePath = AppContext.BaseDirectory;
-                var fileName = Path.Combine(basePath, "APICore.API.xml");
-                var fileName2 = Path.Combine(basePath, "APICore.Common.xml");
+                var xmlFile = $"{Assembly.GetEntryAssembly().GetName().Name}.xml";
+                var fileName = Path.Combine(basePath, xmlFile);
                 options.IncludeXmlComments(fileName);
-                options.IncludeXmlComments(fileName2);
             });
         }
 
