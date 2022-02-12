@@ -135,8 +135,6 @@ namespace APICore.API
 
                 endpoints.MapControllers();
             });
-
-            DatabaseSeed.SeedDatabaseAsync(services).Wait();
         }
     }
 }
