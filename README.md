@@ -74,10 +74,11 @@ Need Blob account azure (or use developer storage emulator).
 # Docker
 Get docker at https://www.docker.com/get-started
 
-Run docker
+Run docker, and later run these command on your dockerfile scope (where your dockerfile is located)
 
-cd net6-api
-
+```
 docker build --rm -t  ntsprint/api-core-net6:latest .
-
+```
+```
 docker run --rm -p 5000:5000 -e ASPNETCORE_URLS=http://+:5000 -e ASPNETCORE_ENVIRONMENT=Development ntsprint/api-core-net6
+```
