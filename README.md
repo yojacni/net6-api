@@ -64,8 +64,14 @@ Next, in order to reflect these changes in the database execute:
 dotnet ef database update -s ..\APICore.API
 ```
 
-#Blob
+# Blob
 Need Blob account azure (or use developer storage emulator).
 [ROOT_PATH] the root path of the Blob.
 [CONTAINER_NAME] name of the image container.
 
+# Docker
+Get docker at https://www.docker.com/get-started
+Run docker
+cd net6-api
+docker build --rm -t  ntsprint/api-core-net6:latest .
+docker run --rm -p 5000:5000 -e ASPNETCORE_URLS=http://+:5000 -e ASPNETCORE_ENVIRONMENT=Development ntsprint/api-core-net6
