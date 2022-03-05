@@ -13,6 +13,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.Localization;
 using Moq;
+using Moq.Inject;
 using System;
 using System.Threading.Tasks;
 using Wangkanai.Detection.Services;
@@ -23,14 +24,12 @@ namespace APICore.Tests.Account
     public class RegisterAction
     {
         private DbContextOptions<CoreDbContext> ContextOptions { get; }
-        private readonly IStorageService storageService;
 
         public RegisterAction()
         {
             ContextOptions = new DbContextOptionsBuilder<CoreDbContext>()
                                        .UseInMemoryDatabase("TestRegisterDatabase")
                                        .Options;
-            storageService = new Mock<IStorageService>().Object;
 
             SeedAsync().Wait();
         }
@@ -63,17 +62,14 @@ namespace APICore.Tests.Account
             var fakeUserRequest = new SignUpRequest
             {
                 Email = @"carlos@itguy.com",
-                FullName = "Carlos Perez",
+                FullName = "Carlos Delgado",
                 Gender = 0,
                 Phone = "+53 12345678",
                 Birthday = DateTime.Now,
                 Password = @"S3cretP@$$",
                 ConfirmationPassword = @"S3cretP@$$"
             };
-
-            using var context = new CoreDbContext(ContextOptions);
-            var accountService = new AccountService(new Mock<IConfiguration>().Object, new UnitOfWork(context), new Mock<IStringLocalizer<IAccountService>>().Object, new Mock<IDetectionService>().Object, storageService);
-            var accountController = new AccountController(accountService, new Mock<AutoMapper.IMapper>().Object, new Mock<IEmailService>().Object, new Mock<IWebHostEnvironment>().Object);
+            var accountController = Injector.Create<AccountController>();
 
             // ACT
             var taskResult = (ObjectResult)accountController.Register(fakeUserRequest).Result;
@@ -89,17 +85,14 @@ namespace APICore.Tests.Account
             var fakeUserRequest = new SignUpRequest
             {
                 Email = "",
-                FullName = "Pepe Perez",
+                FullName = "Manuel Delgado",
                 Gender = 0,
                 Phone = "+53 12345678",
                 Birthday = DateTime.Now,
                 Password = @"S3cretP@$$",
                 ConfirmationPassword = @"S3cretP@$$"
             };
-
-            using var context = new CoreDbContext(ContextOptions);
-            var accountService = new AccountService(new Mock<IConfiguration>().Object, new UnitOfWork(context), new Mock<IStringLocalizer<IAccountService>>().Object, new Mock<IDetectionService>().Object, storageService);
-            var accountController = new AccountController(accountService, new Mock<AutoMapper.IMapper>().Object, new Mock<IEmailService>().Object, new Mock<IWebHostEnvironment>().Object);
+            var accountController = Injector.Create<AccountController>();
 
             // ACT
             var aggregateException = accountController.Register(fakeUserRequest).Exception;
@@ -117,10 +110,7 @@ namespace APICore.Tests.Account
             {
                 Email = "pepe@itguy.com"
             };
-
-            using var context = new CoreDbContext(ContextOptions);
-            var accountService = new AccountService(new Mock<IConfiguration>().Object, new UnitOfWork(context), new Mock<IStringLocalizer<IAccountService>>().Object, new Mock<IDetectionService>().Object, storageService);
-            var accountController = new AccountController(accountService, new Mock<AutoMapper.IMapper>().Object, new Mock<IEmailService>().Object, new Mock<IWebHostEnvironment>().Object);
+            var accountController = Injector.Create<AccountController>();
 
             // ACT
             var aggregateException = accountController.Register(fakeUserRequest).Exception;
@@ -144,10 +134,7 @@ namespace APICore.Tests.Account
                 Password = "",
                 ConfirmationPassword = @"S3cretP@$$"
             };
-
-            using var context = new CoreDbContext(ContextOptions);
-            var accountService = new AccountService(new Mock<IConfiguration>().Object, new UnitOfWork(context), new Mock<IStringLocalizer<IAccountService>>().Object, new Mock<IDetectionService>().Object, storageService);
-            var accountController = new AccountController(accountService, new Mock<AutoMapper.IMapper>().Object, new Mock<IEmailService>().Object, new Mock<IWebHostEnvironment>().Object);
+            var accountController = Injector.Create<AccountController>();
 
             // ACT
             var aggregateException = accountController.Register(fakeUserRequest).Exception;
@@ -171,10 +158,7 @@ namespace APICore.Tests.Account
                 Password = "S3cr",
                 ConfirmationPassword = @"S3cretP@$$"
             };
-
-            using var context = new CoreDbContext(ContextOptions);
-            var accountService = new AccountService(new Mock<IConfiguration>().Object, new UnitOfWork(context), new Mock<IStringLocalizer<IAccountService>>().Object, new Mock<IDetectionService>().Object, storageService);
-            var accountController = new AccountController(accountService, new Mock<AutoMapper.IMapper>().Object, new Mock<IEmailService>().Object, new Mock<IWebHostEnvironment>().Object);
+            var accountController = Injector.Create<AccountController>();
 
             // ACT
             var aggregateException = accountController.Register(fakeUserRequest).Exception;
@@ -198,10 +182,7 @@ namespace APICore.Tests.Account
                 Password = @"Z3cretP@$$",
                 ConfirmationPassword = @"S3cretP@$$"
             };
-
-            using var context = new CoreDbContext(ContextOptions);
-            var accountService = new AccountService(new Mock<IConfiguration>().Object, new UnitOfWork(context), new Mock<IStringLocalizer<IAccountService>>().Object, new Mock<IDetectionService>().Object, storageService);
-            var accountController = new AccountController(accountService, new Mock<AutoMapper.IMapper>().Object, new Mock<IEmailService>().Object, new Mock<IWebHostEnvironment>().Object);
+            var accountController = Injector.Create<AccountController>();
 
             // ACT
             var aggregateException = accountController.Register(fakeUserRequest).Exception;
